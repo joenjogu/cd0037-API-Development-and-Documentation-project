@@ -1,4 +1,6 @@
+from ast import Return
 import os
+import sys
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -12,6 +14,7 @@ def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
     setup_db(app)
+    CORS(app, resources={r'*/api/*' : {'origins' : '*'}})
 
     """
     @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
@@ -20,12 +23,30 @@ def create_app(test_config=None):
     """
     @TODO: Use the after_request decorator to set Access-Control-Allow
     """
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+        return response
+
+    @app.route('/')
+    def sample_endpoint():
+        return jsonify({'message' : 'Hello World'})
 
     """
     @TODO:
     Create an endpoint to handle GET requests
     for all available categories.
     """
+    @app.route('/categories')
+    def get_all_categories():
+        categories = Category.query().all()
+        print(categories, file=sys.stdout)
+        formatted_categories = [category.format() for category in categories]
+        return jsonify({
+            'status': 200,
+            'message': formatted_categories
+        })
 
 
     """
