@@ -1,4 +1,5 @@
 from ast import Return
+from crypt import methods
 import os
 import sys
 from flask import Flask, request, abort, jsonify
@@ -14,7 +15,7 @@ def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
     setup_db(app)
-    CORS(app, resources={r'*/api/*' : {'origins' : '*'}})
+    CORS(app, resources={r'/api/*' : {'origins' : '*'}})
 
     """
     @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
@@ -39,12 +40,12 @@ def create_app(test_config=None):
     for all available categories.
     """
     @app.route('/categories')
-    def get_all_categories():
-        categories = Category.query().all()
+    def get_categories():
+        categories = Category.query.all()
         print(categories, file=sys.stdout)
         formatted_categories = [category.format() for category in categories]
         return jsonify({
-            'status': 200,
+            'success': True  ,
             'message': formatted_categories
         })
 
@@ -62,6 +63,27 @@ def create_app(test_config=None):
     Clicking on the page numbers should update the questions.
     """
 
+    @app.route('/questions')
+    def get_questions():
+        page = request.args.get('page', 1, type=int)
+        start = (page - 1) * QUESTIONS_PER_PAGE
+        end = start + QUESTIONS_PER_PAGE
+
+        questions = Question.query.all()
+        formatted_questions = [question.format() for question in questions]
+
+        categories = Category.query.all()
+        formatted_categories = [category.format() for category in categories]
+        
+
+        return jsonify({
+            'success' : True,
+            'questions' : formatted_questions[start:end],
+            'total_questions' : len(formatted_questions),
+            'categories' : formatted_categories,
+            'current_category' : categories[questions[start].category].type
+        })
+
     """
     @TODO:
     Create an endpoint to DELETE question using a question ID.
@@ -69,6 +91,28 @@ def create_app(test_config=None):
     TEST: When you click the trash icon next to a question, the question will be removed.
     This removal will persist in the database and when you refresh the page.
     """
+
+    @app.route('/delete_question/<int:question_id>', methods=['DELETE'])
+    def delete_question(question_id):
+
+        try:
+            question = Question.query.filter(Question.id == question_id).one_or_none()
+
+            if question is None:
+                abort(404)
+            
+            question.delete()
+
+            return jsonify({
+                'success': True,
+                'deleted': question_id,
+
+            })
+
+        
+        except:
+            abort(404)
+        
 
     """
     @TODO:
