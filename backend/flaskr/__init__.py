@@ -92,7 +92,7 @@ def create_app(test_config=None):
     This removal will persist in the database and when you refresh the page.
     """
 
-    @app.route('/delete_question/<int:question_id>', methods=['DELETE'])
+    @app.route('/delete_question/<int:question_id>', methods=['GET', 'POST'])
     def delete_question(question_id):
 
         try:
@@ -111,7 +111,7 @@ def create_app(test_config=None):
 
         
         except:
-            abort(404)
+            abort(422)
         
 
     """
@@ -135,6 +135,11 @@ def create_app(test_config=None):
     only question that include that string within their question.
     Try using the word "title" to start.
     """
+
+    @app.route('/search', methods=['POST'])
+    def search_by_term():
+        pass
+
 
     """
     @TODO:
