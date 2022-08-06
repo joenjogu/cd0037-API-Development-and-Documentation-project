@@ -1,7 +1,11 @@
 from ast import Return
 from crypt import methods
+import json
+from math import ceil
 import os
+from sre_constants import SUCCESS
 import sys
+from telnetlib import STATUS
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -15,14 +19,14 @@ def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
     setup_db(app)
-    CORS(app, resources={r'/api/*' : {'origins' : '*'}})
+    # CORS(app, resources={r'/api/*' : {'origins' : '*'}})
 
     """
-    @TODO: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
+    @DONE: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
     """
 
     """
-    @TODO: Use the after_request decorator to set Access-Control-Allow
+    @DONE: Use the after_request decorator to set Access-Control-Allow
     """
     @app.after_request
     def after_request(response):
@@ -35,7 +39,7 @@ def create_app(test_config=None):
         return jsonify({'message' : 'Hello World'})
 
     """
-    @TODO:
+    @DONE:
     Create an endpoint to handle GET requests
     for all available categories.
     """
@@ -51,7 +55,7 @@ def create_app(test_config=None):
 
 
     """
-    @TODO:
+    @DONE:
     Create an endpoint to handle GET requests for questions,
     including pagination (every 10 questions).
     This endpoint should return a list of questions,
@@ -72,6 +76,10 @@ def create_app(test_config=None):
         questions = Question.query.all()
         formatted_questions = [question.format() for question in questions]
 
+        max_page = ceil(len(formatted_questions) / QUESTIONS_PER_PAGE)
+        if page > max_page:
+            abort(404)
+
         categories = Category.query.all()
         formatted_categories = [category.format() for category in categories]
         
@@ -85,7 +93,7 @@ def create_app(test_config=None):
         })
 
     """
-    @TODO:
+    @DONE:
     Create an endpoint to DELETE question using a question ID.
 
     TEST: When you click the trash icon next to a question, the question will be removed.
@@ -109,13 +117,12 @@ def create_app(test_config=None):
 
             })
 
-        
         except:
             abort(422)
         
 
     """
-    @TODO:
+    @DONE:
     Create an endpoint to POST a new question,
     which will require the question and answer text,
     category, and difficulty score.
@@ -124,6 +131,40 @@ def create_app(test_config=None):
     the form will clear and the question will appear at the end of the last page
     of the questions list in the "List" tab.
     """
+
+    @app.route('/questions/submit', methods=['POST'])
+    def post_question():
+
+        try:
+
+            if request.method == 'POST':
+                question = request.json['question']
+                answer = request.json['answer']
+                difficulty = request.json['difficulty']
+                category = request.json['category']
+
+                if not (question or answer or difficulty or category):
+                    abort(404)
+
+                question: Question = Question(
+                    question=question,
+                    answer=answer,
+                    category=category,
+                    difficulty=difficulty
+                )
+
+                question.insert()
+
+                return jsonify({
+                    'success': True,
+                    'question': question
+                })
+            else:
+                abort(405)
+
+        except:
+            abort(422)
+            
 
     """
     @TODO:
@@ -136,19 +177,64 @@ def create_app(test_config=None):
     Try using the word "title" to start.
     """
 
-    @app.route('/search', methods=['POST'])
+    @app.route('/search', methods=['GET', 'POST'])
     def search_by_term():
-        pass
+        search_term = None
+        print(f' search term{search_term}', file=sys.stdout)
+        if request.method == 'POST':
+            search_term = request.json['searchTerm']
+            print(f'POST search term{search_term}', file=sys.stdout)
+            if search_term:
+                search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%'))
+            
+            else:
+                abort(422)
+            
+            if search_results:
+                formatted_questions = [question.format for question in search_results]
+                return jsonify({
+                    'success': True,
+                    'questions': formatted_questions,
+                    'total_questions': len(search_results),
+                    'current_category': ''
+                })
+            
+            else:
+                abort(404)
+
+        else:
+            abort(405)
+
 
 
     """
-    @TODO:
+    @DONE:
     Create a GET endpoint to get questions based on category.
 
     TEST: In the "List" tab / main screen, clicking on one of the
     categories in the left column will cause only questions of that
     category to be shown.
     """
+
+    @app.route('/categories/<int:category_id>/questions')
+    def get_questions_by_category(category_id):
+
+        try:
+            questions = Question.query.filter(Question.category == category_id).all()
+
+            formatted_questions = [question.format() for question in questions]
+
+            if len(questions) == 0:
+                abort(404)
+
+            return jsonify({
+                'success': True,
+                'questions': formatted_questions
+            })
+
+        except Exception as e:
+            # abort()
+            raise e
 
     """
     @TODO:
@@ -163,10 +249,27 @@ def create_app(test_config=None):
     """
 
     """
-    @TODO:
+    @DONE:
     Create error handlers for all expected errors
     including 404 and 422.
     """
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({
+            'success': False,
+            'error': 404,
+            'message': 'resource not found'
+        }), 404
+
+    @app.errorhandler(422)
+    def unprocessable(error):
+        return jsonify({
+            'success': False,
+            'error': 422,
+            'message': 'unprocessable'
+        }), 422
+
 
     return app
 
