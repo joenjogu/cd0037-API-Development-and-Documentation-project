@@ -3,6 +3,7 @@ from crypt import methods
 import json
 from math import ceil
 import os
+from secrets import choice
 from sre_constants import SUCCESS
 import sys
 from telnetlib import STATUS
@@ -203,35 +204,40 @@ def create_app(test_config=None):
     def search_by_term():
         search_term = None
         print(f' search term{search_term}', file=sys.stdout)
-        if request.method == 'POST':
-            if not request.json:
-                abort(422)
 
-            search_term = request.json['searchTerm']
-            print(f'POST search term{search_term}', file=sys.stdout)
-            if search_term:
-                search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
-                print(f'search results {search_results}', file=sys.stdout)
-            else:
-                abort(422)
-            
-            if search_results:
-                formatted_questions = [question.format() for question in search_results]
-                question_category_id = search_results[0].category
-                current_category = Category.query.filter(Category.id == question_category_id).first().type
+        try:
+            if request.method == 'POST':
+                if not request.json:
+                    abort(422)
+
+                search_term = request.json['searchTerm']
+                print(f'POST search term{search_term}', file=sys.stdout)
+                if search_term:
+                    search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+                    print(f'search results {search_results}', file=sys.stdout)
+                else:
+                    abort(422)
                 
-                return jsonify({
-                    'success': True,
-                    'questions': formatted_questions,
-                    'total_questions': len(formatted_questions),
-                    'current_category': current_category
-                })
-            
-            else:
-                abort(404)
+                if search_results:
+                    formatted_questions = [question.format() for question in search_results]
+                    question_category_id = search_results[0].category
+                    current_category = Category.query.filter(Category.id == question_category_id).first().type
+                    
+                    return jsonify({
+                        'success': True,
+                        'questions': formatted_questions,
+                        'total_questions': len(formatted_questions),
+                        'current_category': current_category
+                    })
+                
+                else:
+                    abort(404)
 
-        else:
-            abort(405)
+            else:
+                abort(405)
+
+        except:
+            abort(404)
 
 
 
@@ -287,6 +293,73 @@ def create_app(test_config=None):
     including 404 and 422.
     """
 
+    @app.route('/quiz', methods=['POST'])
+    def get_random_quiz():
+
+        try:
+            if request.method == 'POST':
+                if not request.json:
+                    abort(400)
+
+                category_id = request.json['quiz_category']
+                previous_questions = request.json['previous_questions']
+
+                if not (category_id or previous_questions):
+                    questions = Question.query.all()
+                    formatted_questions = [question.format() for question in questions]
+                    print(f'category id {category_id}', file=sys.stdout)
+                    return jsonify({
+                        'success': True,
+                        'question': random.choice(formatted_questions)
+                    })
+                
+                if (not category_id) and previous_questions:
+                    previous_questions_ids = []
+                    [previous_questions_ids.append(question['id']) for question in previous_questions]
+                    print(f'previous_questions_ids {previous_questions_ids}', file=sys.stdout)
+                    db_questions = Question.query.filter(~Question.id.in_(previous_questions_ids)).all()
+                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
+
+                    formatted_questions = [question.format() for question in db_questions]
+
+                    return jsonify({
+                        'success': True,
+                        'question': random.choice(formatted_questions)
+                    })
+
+                if (not previous_questions) and category_id:
+                    db_questions = Question.query.filter(Question.category == category_id).all()
+                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
+                    formatted_questions = [question.format() for question in db_questions]
+
+                    return jsonify({
+                        'success': True,
+                        'question': random.choice(formatted_questions)
+                    })
+
+                if category_id and previous_questions:
+                    previous_questions_ids = []
+                    [previous_questions_ids.append(question['id']) for question in previous_questions]
+                    db_questions = Question.query.filter(~Question.id.in_(previous_questions_ids) & (Question.category == category_id)).all()
+                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
+
+                    formatted_questions = [question.format() for question in db_questions]
+
+                    return jsonify({
+                        'success': True,
+                        'question': random.choice(formatted_questions)
+                    })
+                
+            else:
+                abort(405)
+
+        except:
+            traceback.print_exc()
+            abort(422)
+
+
+
+
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({
@@ -310,6 +383,14 @@ def create_app(test_config=None):
             'error': 422,
             'message': 'unprocessable'
         }), 422
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return jsonify({
+            'success': False,
+            'error': 400,
+            'message': 'bad request'
+        })
 
 
     return app
