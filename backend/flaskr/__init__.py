@@ -1,21 +1,14 @@
-from ast import Return
-from crypt import methods
-import json
 from math import ceil
-import os
-from secrets import choice
-from sre_constants import SUCCESS
 import sys
-from telnetlib import STATUS
 import traceback
 from flask import Flask, request, abort, jsonify
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
 
 from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
+
 
 def create_app(test_config=None):
     # create and configure the app
@@ -24,7 +17,8 @@ def create_app(test_config=None):
     # CORS(app, resources={r'/api/*' : {'origins' : '*'}})
 
     """
-    @DONE: Set up CORS. Allow '*' for origins. Delete the sample route after completing the TODOs
+    @DONE: Set up CORS. Allow '*' for origins.
+    Delete the sample route after completing the TODOs
     """
 
     """
@@ -32,13 +26,17 @@ def create_app(test_config=None):
     """
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+        response.headers.add(
+            'Access-Control-Allow-Headers',
+             'Content-Type, Authorization')
+        response.headers.add(
+            'Access-Control-Allow-Methods',
+             'GET, POST, DELETE, OPTIONS')
         return response
 
     @app.route('/')
     def sample_endpoint():
-        return jsonify({'message' : 'Hello World'})
+        return jsonify({'message': 'Hello World'})
 
     """
     @DONE:
@@ -48,7 +46,7 @@ def create_app(test_config=None):
     @app.route('/categories')
     def get_categories():
         categories = Category.query.all()
-        
+
         if not categories:
             abort(404)
 
@@ -57,7 +55,6 @@ def create_app(test_config=None):
             'success': True,
             'categories': formatted_categories
         })
-
 
     """
     @DONE:
@@ -68,7 +65,8 @@ def create_app(test_config=None):
 
     TEST: At this point, when you start the application
     you should see questions and categories generated,
-    ten questions per page and pagination at the bottom of the screen for three pages.
+    ten questions per page and
+    pagination at the bottom of the screen for three pages.
     Clicking on the page numbers should update the questions.
     """
 
@@ -87,21 +85,21 @@ def create_app(test_config=None):
 
         categories = Category.query.all()
         formatted_categories = [category.format() for category in categories]
-        
 
         return jsonify({
-            'success' : True,
-            'questions' : formatted_questions[start:end],
-            'total_questions' : len(formatted_questions),
-            'categories' : formatted_categories,
-            'current_category' : categories[questions[start].category].type
+            'success': True,
+            'questions': formatted_questions[start:end],
+            'total_questions': len(formatted_questions),
+            'categories': formatted_categories,
+            'current_category': categories[questions[start].category].type
         })
 
     """
     @DONE:
     Create an endpoint to DELETE question using a question ID.
 
-    TEST: When you click the trash icon next to a question, the question will be removed.
+    TEST: When you click the trash icon next to a question,
+    the question will be removed.
     This removal will persist in the database and when you refresh the page.
     """
 
@@ -109,22 +107,22 @@ def create_app(test_config=None):
     def delete_question(question_id):
 
         try:
-            question = Question.query.filter(Question.id == question_id).one_or_none()
+            question = Question.query.filter(
+                Question.id == question_id
+                ).one_or_none()
 
             if question is None:
                 abort(404)
-            
+
             question.delete()
 
             return jsonify({
                 'success': True,
                 'deleted': question_id,
-
             })
 
         except:
             abort(422)
-        
 
     """
     @DONE:
@@ -187,7 +185,6 @@ def create_app(test_config=None):
         except:
             traceback.print_exc()
             abort(422)
-            
 
     """
     @TODO:
@@ -213,23 +210,27 @@ def create_app(test_config=None):
                 search_term = request.json['searchTerm']
                 print(f'POST search term{search_term}', file=sys.stdout)
                 if search_term:
-                    search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+                    search_results = Question.query.filter(
+                        Question.question.ilike(f'%{search_term}%')
+                        ).all()
                     print(f'search results {search_results}', file=sys.stdout)
                 else:
                     abort(422)
-                
+
                 if search_results:
                     formatted_questions = [question.format() for question in search_results]
                     question_category_id = search_results[0].category
-                    current_category = Category.query.filter(Category.id == question_category_id).first().type
-                    
+                    current_category = Category.query.filter(
+                        Category.id == question_category_id
+                        ).first().type
+
                     return jsonify({
                         'success': True,
                         'questions': formatted_questions,
                         'total_questions': len(formatted_questions),
                         'current_category': current_category
                     })
-                
+
                 else:
                     abort(404)
 
@@ -238,8 +239,6 @@ def create_app(test_config=None):
 
         except:
             abort(404)
-
-
 
     """
     @DONE:
@@ -268,11 +267,11 @@ def create_app(test_config=None):
             return jsonify({
                 'success': True,
                 'questions': formatted_questions,
-                'total_questions' : len(formatted_questions),
-                'current_category' : categories[category_id].type
+                'total_questions': len(formatted_questions),
+                'current_category': categories[category_id].type
             })
 
-        except Exception as e:
+        except:
             abort(422)
 
     """
@@ -312,12 +311,14 @@ def create_app(test_config=None):
                         'success': True,
                         'question': random.choice(formatted_questions)
                     })
-                
+
                 if (not category_id) and previous_questions:
                     previous_questions_ids = []
                     [previous_questions_ids.append(question['id']) for question in previous_questions]
-                    print(f'previous_questions_ids {previous_questions_ids}', file=sys.stdout)
-                    db_questions = Question.query.filter(~Question.id.in_(previous_questions_ids)).all()
+
+                    db_questions = Question.query.filter(
+                        ~Question.id.in_(previous_questions_ids)
+                        ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
                     formatted_questions = [question.format() for question in db_questions]
@@ -328,7 +329,9 @@ def create_app(test_config=None):
                     })
 
                 if (not previous_questions) and category_id:
-                    db_questions = Question.query.filter(Question.category == category_id).all()
+                    db_questions = Question.query.filter(
+                        Question.category == category_id
+                        ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
                     formatted_questions = [question.format() for question in db_questions]
 
@@ -340,7 +343,10 @@ def create_app(test_config=None):
                 if category_id and previous_questions:
                     previous_questions_ids = []
                     [previous_questions_ids.append(question['id']) for question in previous_questions]
-                    db_questions = Question.query.filter(~Question.id.in_(previous_questions_ids) & (Question.category == category_id)).all()
+                    db_questions = Question.query.filter(
+                        ~Question.id.in_(previous_questions_ids)
+                        & (Question.category == category_id)
+                        ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
                     formatted_questions = [question.format() for question in db_questions]
@@ -349,16 +355,13 @@ def create_app(test_config=None):
                         'success': True,
                         'question': random.choice(formatted_questions)
                     })
-                
+
             else:
                 abort(405)
 
         except:
             traceback.print_exc()
             abort(422)
-
-
-
 
     @app.errorhandler(404)
     def not_found(error):
@@ -392,6 +395,4 @@ def create_app(test_config=None):
             'message': 'bad request'
         })
 
-
     return app
-
