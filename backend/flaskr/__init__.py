@@ -6,6 +6,7 @@ import os
 from sre_constants import SUCCESS
 import sys
 from telnetlib import STATUS
+import traceback
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -46,11 +47,14 @@ def create_app(test_config=None):
     @app.route('/categories')
     def get_categories():
         categories = Category.query.all()
-        print(categories, file=sys.stdout)
+        
+        if not categories:
+            abort(404)
+
         formatted_categories = [category.format() for category in categories]
         return jsonify({
-            'success': True  ,
-            'message': formatted_categories
+            'success': True,
+            'categories': formatted_categories
         })
 
 
@@ -100,7 +104,7 @@ def create_app(test_config=None):
     This removal will persist in the database and when you refresh the page.
     """
 
-    @app.route('/delete_question/<int:question_id>', methods=['GET', 'POST'])
+    @app.route('/delete_question/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
 
         try:
@@ -138,13 +142,30 @@ def create_app(test_config=None):
         try:
 
             if request.method == 'POST':
-                question = request.json['question']
-                answer = request.json['answer']
+                if not request.json:
+                    abort(422)
+                question = request.json['question'].strip()
+                answer = request.json['answer'].strip()
                 difficulty = request.json['difficulty']
                 category = request.json['category']
 
-                if not (question or answer or difficulty or category):
+                total_categories = len(Category.query.all())
+                max_difficulty = 5
+
+                if not (question and answer and difficulty and category):
                     abort(404)
+
+                if category > total_categories:
+                    return jsonify({
+                        'success': False,
+                        'message': 'category does not exist'
+                    })
+
+                if difficulty > max_difficulty:
+                    return jsonify({
+                        'success': False,
+                        'message': f'maximum difficulty is {max_difficulty}'
+                    })
 
                 question: Question = Question(
                     question=question,
@@ -157,12 +178,13 @@ def create_app(test_config=None):
 
                 return jsonify({
                     'success': True,
-                    'question': question
+                    'question': question.format()
                 })
             else:
                 abort(405)
 
         except:
+            traceback.print_exc()
             abort(422)
             
 
@@ -182,21 +204,27 @@ def create_app(test_config=None):
         search_term = None
         print(f' search term{search_term}', file=sys.stdout)
         if request.method == 'POST':
+            if not request.json:
+                abort(422)
+
             search_term = request.json['searchTerm']
             print(f'POST search term{search_term}', file=sys.stdout)
             if search_term:
-                search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%'))
-            
+                search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+                print(f'search results {search_results}', file=sys.stdout)
             else:
                 abort(422)
             
             if search_results:
-                formatted_questions = [question.format for question in search_results]
+                formatted_questions = [question.format() for question in search_results]
+                question_category_id = search_results[0].category
+                current_category = Category.query.filter(Category.id == question_category_id).first().type
+                
                 return jsonify({
                     'success': True,
                     'questions': formatted_questions,
-                    'total_questions': len(search_results),
-                    'current_category': ''
+                    'total_questions': len(formatted_questions),
+                    'current_category': current_category
                 })
             
             else:
@@ -220,6 +248,8 @@ def create_app(test_config=None):
     def get_questions_by_category(category_id):
 
         try:
+            if not category_id:
+                abort(422)
             questions = Question.query.filter(Question.category == category_id).all()
 
             formatted_questions = [question.format() for question in questions]
@@ -227,14 +257,17 @@ def create_app(test_config=None):
             if len(questions) == 0:
                 abort(404)
 
+            categories = Category.query.all()
+
             return jsonify({
                 'success': True,
-                'questions': formatted_questions
+                'questions': formatted_questions,
+                'total_questions' : len(formatted_questions),
+                'current_category' : categories[category_id].type
             })
 
         except Exception as e:
-            # abort()
-            raise e
+            abort(422)
 
     """
     @TODO:
@@ -261,6 +294,14 @@ def create_app(test_config=None):
             'error': 404,
             'message': 'resource not found'
         }), 404
+
+    @app.errorhandler(405)
+    def unallowed(error):
+        return jsonify({
+            'success': False,
+            'error': 405,
+            'message': 'method not allowed'
+        }), 405
 
     @app.errorhandler(422)
     def unprocessable(error):
