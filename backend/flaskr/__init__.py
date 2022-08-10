@@ -28,10 +28,12 @@ def create_app(test_config=None):
     def after_request(response):
         response.headers.add(
             'Access-Control-Allow-Headers',
-             'Content-Type, Authorization')
+            'Content-Type, Authorization'
+             )
         response.headers.add(
             'Access-Control-Allow-Methods',
-             'GET, POST, DELETE, OPTIONS')
+            'GET, POST, DELETE, OPTIONS'
+             )
         return response
 
     @app.route('/')
@@ -132,7 +134,8 @@ def create_app(test_config=None):
     category, and difficulty score.
 
     TEST: When you submit a question on the "Add" tab,
-    the form will clear and the question will appear at the end of the last page
+    the form will clear,
+    and the question will appear at the end of the last page
     of the questions list in the "List" tab.
     """
 
@@ -220,7 +223,8 @@ def create_app(test_config=None):
                     abort(422)
 
                 if search_results:
-                    formatted_questions = [question.format() for question in search_results]
+                    formatted_questions = \
+                        [question.format() for question in search_results]
                     question_category_id = search_results[0].category
                     current_category = Category.query.filter(
                         Category.id == question_category_id
@@ -258,7 +262,9 @@ def create_app(test_config=None):
         try:
             if not category_id:
                 abort(422)
-            questions = Question.query.filter(Question.category == category_id).all()
+            questions = Question.query.filter(
+                Question.category == category_id
+                ).all()
 
             formatted_questions = [question.format() for question in questions]
 
@@ -309,7 +315,8 @@ def create_app(test_config=None):
 
                 if not (category_id or previous_questions):
                     questions = Question.query.all()
-                    formatted_questions = [question.format() for question in questions]
+                    formatted_questions = \
+                        [question.format() for question in questions]
                     print(f'category id {category_id}', file=sys.stdout)
                     return jsonify({
                         'success': True,
@@ -318,14 +325,16 @@ def create_app(test_config=None):
 
                 if (not category_id) and previous_questions:
                     previous_questions_ids = []
-                    [previous_questions_ids.append(question['id']) for question in previous_questions]
+                    [previous_questions_ids.append(question['id'])
+                        for question in previous_questions]
 
                     db_questions = Question.query.filter(
                         ~Question.id.in_(previous_questions_ids)
                         ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
-                    formatted_questions = [question.format() for question in db_questions]
+                    formatted_questions = \
+                        [question.format() for question in db_questions]
 
                     return jsonify({
                         'success': True,
@@ -337,7 +346,8 @@ def create_app(test_config=None):
                         Question.category == category_id
                         ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
-                    formatted_questions = [question.format() for question in db_questions]
+                    formatted_questions = \
+                        [question.format() for question in db_questions]
 
                     return jsonify({
                         'success': True,
@@ -346,14 +356,16 @@ def create_app(test_config=None):
 
                 if category_id and previous_questions:
                     previous_questions_ids = []
-                    [previous_questions_ids.append(question['id']) for question in previous_questions]
+                    [previous_questions_ids.append(question['id'])
+                        for question in previous_questions]
                     db_questions = Question.query.filter(
                         ~Question.id.in_(previous_questions_ids)
                         & (Question.category == category_id)
                         ).all()
                     print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
-                    formatted_questions = [question.format() for question in db_questions]
+                    formatted_questions = \
+                        [question.format() for question in db_questions]
 
                     return jsonify({
                         'success': True,
