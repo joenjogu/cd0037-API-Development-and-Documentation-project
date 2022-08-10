@@ -121,7 +121,8 @@ def create_app(test_config=None):
                 'deleted': question_id,
             })
 
-        except:
+        except Exception as e:
+            print(e)
             abort(422)
 
     """
@@ -182,7 +183,8 @@ def create_app(test_config=None):
             else:
                 abort(405)
 
-        except:
+        except Exception as e:
+            print(e)
             traceback.print_exc()
             abort(422)
 
@@ -237,7 +239,8 @@ def create_app(test_config=None):
             else:
                 abort(405)
 
-        except:
+        except Exception as e:
+            print(e)
             abort(404)
 
     """
@@ -271,7 +274,8 @@ def create_app(test_config=None):
                 'current_category': categories[category_id].type
             })
 
-        except:
+        except Exception as e:
+            print(e)
             abort(422)
 
     """
@@ -359,7 +363,8 @@ def create_app(test_config=None):
             else:
                 abort(405)
 
-        except:
+        except Exception as e:
+            print(e)
             traceback.print_exc()
             abort(422)
 
