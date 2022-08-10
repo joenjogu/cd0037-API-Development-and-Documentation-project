@@ -1,5 +1,4 @@
 from math import ceil
-import sys
 import traceback
 from flask import Flask, request, abort, jsonify
 from flask_cors import CORS
@@ -14,7 +13,7 @@ def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
     setup_db(app)
-    # CORS(app, resources={r'/api/*' : {'origins' : '*'}})
+    CORS(app, resources={r'/api/*': {'origins': '*'}})
 
     """
     @DONE: Set up CORS. Allow '*' for origins.
@@ -52,7 +51,7 @@ def create_app(test_config=None):
         if not categories:
             abort(404)
 
-        formatted_categories = [category.format() for category in categories]
+        formatted_categories = [category.id for category in categories]
         return jsonify({
             'success': True,
             'categories': formatted_categories
@@ -86,7 +85,7 @@ def create_app(test_config=None):
             abort(404)
 
         categories = Category.query.all()
-        formatted_categories = [category.format() for category in categories]
+        formatted_categories = [category.id for category in categories]
 
         return jsonify({
             'success': True,
@@ -164,7 +163,7 @@ def create_app(test_config=None):
                         'message': 'category does not exist'
                     })
 
-                if difficulty > max_difficulty:
+                if int(difficulty) > max_difficulty:
                     return jsonify({
                         'success': False,
                         'message': f'maximum difficulty is {max_difficulty}'
@@ -192,7 +191,7 @@ def create_app(test_config=None):
             abort(422)
 
     """
-    @TODO:
+    @DONE:
     Create a POST endpoint to get questions based on a search term.
     It should return any questions for whom the search term
     is a substring of the question.
@@ -205,7 +204,6 @@ def create_app(test_config=None):
     @app.route('/search', methods=['GET', 'POST'])
     def search_by_term():
         search_term = None
-        print(f' search term{search_term}', file=sys.stdout)
 
         try:
             if request.method == 'POST':
@@ -213,12 +211,11 @@ def create_app(test_config=None):
                     abort(422)
 
                 search_term = request.json['searchTerm']
-                print(f'POST search term{search_term}', file=sys.stdout)
                 if search_term:
                     search_results = Question.query.filter(
                         Question.question.ilike(f'%{search_term}%')
                         ).all()
-                    print(f'search results {search_results}', file=sys.stdout)
+
                 else:
                     abort(422)
 
@@ -260,6 +257,8 @@ def create_app(test_config=None):
     def get_questions_by_category(category_id):
 
         try:
+            category_id += 1
+
             if not category_id:
                 abort(422)
             questions = Question.query.filter(
@@ -277,7 +276,7 @@ def create_app(test_config=None):
                 'success': True,
                 'questions': formatted_questions,
                 'total_questions': len(formatted_questions),
-                'current_category': categories[category_id].type
+                'current_category': categories[category_id - 1].type
             })
 
         except Exception as e:
@@ -285,7 +284,7 @@ def create_app(test_config=None):
             abort(422)
 
     """
-    @TODO:
+    @DONE:
     Create a POST endpoint to get questions to play the quiz.
     This endpoint should take category and previous question parameters
     and return a random questions within the given category,
@@ -310,31 +309,33 @@ def create_app(test_config=None):
                 if not request.json:
                     abort(400)
 
-                category_id = request.json['quiz_category']
+                category_id = request.json['quiz_category']['id']
                 previous_questions = request.json['previous_questions']
 
                 if not (category_id or previous_questions):
                     questions = Question.query.all()
                     formatted_questions = \
                         [question.format() for question in questions]
-                    print(f'category id {category_id}', file=sys.stdout)
+
+                    if not formatted_questions:
+                        abort(404)
+
                     return jsonify({
                         'success': True,
                         'question': random.choice(formatted_questions)
                     })
 
                 if (not category_id) and previous_questions:
-                    previous_questions_ids = []
-                    [previous_questions_ids.append(question['id'])
-                        for question in previous_questions]
 
                     db_questions = Question.query.filter(
-                        ~Question.id.in_(previous_questions_ids)
+                        ~Question.id.in_(previous_questions)
                         ).all()
-                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
                     formatted_questions = \
                         [question.format() for question in db_questions]
+
+                    if not formatted_questions:
+                        abort(404)
 
                     return jsonify({
                         'success': True,
@@ -345,9 +346,12 @@ def create_app(test_config=None):
                     db_questions = Question.query.filter(
                         Question.category == category_id
                         ).all()
-                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
+
                     formatted_questions = \
                         [question.format() for question in db_questions]
+
+                    if not formatted_questions:
+                        abort(404)
 
                     return jsonify({
                         'success': True,
@@ -355,17 +359,17 @@ def create_app(test_config=None):
                     })
 
                 if category_id and previous_questions:
-                    previous_questions_ids = []
-                    [previous_questions_ids.append(question['id'])
-                        for question in previous_questions]
+
                     db_questions = Question.query.filter(
-                        ~Question.id.in_(previous_questions_ids)
+                        ~Question.id.in_(previous_questions)
                         & (Question.category == category_id)
                         ).all()
-                    print(f'filtered db Qs {db_questions}', file=sys.stdout)
 
                     formatted_questions = \
                         [question.format() for question in db_questions]
+
+                    if not formatted_questions:
+                        abort(404)
 
                     return jsonify({
                         'success': True,
