@@ -78,6 +78,9 @@ def create_app(test_config=None):
         end = start + QUESTIONS_PER_PAGE
 
         questions = Question.query.all()
+        if not questions:
+            abort(404)
+            
         formatted_questions = [question.format() for question in questions]
 
         max_page = ceil(len(formatted_questions) / QUESTIONS_PER_PAGE)
@@ -112,8 +115,8 @@ def create_app(test_config=None):
                 Question.id == question_id
                 ).one_or_none()
 
-            if question is None:
-                abort(404)
+            if not question:
+                abort(422)
 
             question.delete()
 
@@ -123,7 +126,7 @@ def create_app(test_config=None):
             })
 
         except Exception as e:
-            print(e)
+            traceback.print_exc()
             abort(422)
 
     """
