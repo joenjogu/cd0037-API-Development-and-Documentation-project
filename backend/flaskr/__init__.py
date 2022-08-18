@@ -95,7 +95,7 @@ def create_app(test_config=None):
             'questions': formatted_questions[start:end],
             'total_questions': len(formatted_questions),
             'categories': formatted_categories,
-            'current_category': categories[questions[start].category].type
+            # 'current_category': categories[questions[start].category].type
         })
 
     """
@@ -110,24 +110,24 @@ def create_app(test_config=None):
     @app.route('/delete_question/<int:question_id>', methods=['DELETE'])
     def delete_question(question_id):
 
-        try:
-            question = Question.query.filter(
-                Question.id == question_id
-                ).one_or_none()
+        # try:
+        question = Question.query.filter(
+            Question.id == question_id
+            ).one_or_none()
 
-            if not question:
-                abort(422)
+        if not question:
+            abort(404)
 
-            question.delete()
+        question.delete()
 
-            return jsonify({
-                'success': True,
-                'deleted': question_id,
-            })
+        return jsonify({
+            'success': True,
+            'deleted': question_id,
+        })
 
-        except Exception as e:
-            traceback.print_exc()
-            abort(422)
+        # except Exception as e:
+        #     traceback.print_exc()
+        #     abort(422)
 
     """
     @DONE:

@@ -1,4 +1,5 @@
 import os
+import sys
 import unittest
 import json
 from urllib import response
@@ -61,28 +62,27 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], False)
         self.assertEqual(data['message'], 'method not allowed')
 
-    # def test_get_questions(self):
-    #     """Test GET request for fetching all questions"""
-    #     response = self.client().get('/questions')
+    def test_get_questions(self):
+        """Test GET request for fetching all questions"""
+        response = self.client().get('/questions?page=1')
 
-    #     data = json.loads(response.data)
-
-    #     self.assertEqual(response.status_code, 200)
-    #     self.assertEqual(data['success'], True)
-    #     self.assertTrue(data['questions'])
-    #     self.assertTrue(data['total_questions'])
-    #     self.assertTrue(data['categories'])
-    #     self.assertTrue(data['current_category'])
-
-
-    def test_delete_question(self):
-        """Test DELETE request for question with id"""
-        response = self.client().delete('/delete_question/8')
         data = json.loads(response.data)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data['success'], True)
-        self.assertTrue(data['deleted'])
+        self.assertTrue(data['questions'])
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(data['categories'])
+        # self.assertTrue(data['current_category'])
+
+    # def test_delete_question(self):
+    #     """Test DELETE request for question with id"""
+    #     response = self.client().delete('/delete_question/12')
+    #     data = json.loads(response.data)
+
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(data['success'], True)
+    #     self.assertTrue(data['deleted'])
 
     def test_404_when_delete_question_id_nonexistent(self):
         """Test DELETE request for question with non-existent id"""
@@ -91,9 +91,65 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(data['success'], False)
-        # self.assertTrue(data['deleted'])
+        self.assertEqual(data['message'], 'resource not found')
 
+    def test_submit_question(self):
+        """Test POST request to submit a new question"""
+        response = self.client().post('/questions/submit', json={
+            'question': 'What species are orangutan?',
+            'answer': 'Homo Trumpes',
+            'difficulty': 2,
+            'category': 1
+        })
+        data = json.loads(response.data)
 
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+
+    def test_405_when_submit_question(self):
+        """Test GET request to submit a new question endpoint returns 405"""
+        response = self.client().get('/questions/submit', json={
+            'question': 'What species are orangutan?',
+            'answer': 'Homo Trumpes',
+            'difficulty': 2,
+            'category': 1
+        })
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'method not allowed')
+
+    def test_search(self):
+        """Test search by term endpoint"""
+        response = self.client().post('/search', json={'searchTerm': 'orangutan'})
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['questions'])
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(data['current_category'])
+
+    def test_404_for_search_term_not_found(self):
+        """Test no results for search term returns 404"""
+        response = self.client().post('/search', json={'searchTerm': 'rebbeberb'})
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'resource not found')
+
+    def test_get_questions_by_category(self):
+        """Test get questions in specific category"""
+        response = self.client().get('/categories/2/questions')
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data['questions'])
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(data['current_category'])
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
