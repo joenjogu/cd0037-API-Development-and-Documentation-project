@@ -143,13 +143,34 @@ class TriviaTestCase(unittest.TestCase):
 
     def test_get_questions_by_category(self):
         """Test get questions in specific category"""
-        response = self.client().get('/categories/2/questions')
+        response = self.client().get('/categories/1/questions')
         data = json.loads(response.data)
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(data['questions'])
         self.assertTrue(data['total_questions'])
         self.assertTrue(data['current_category'])
+
+    def test_get_random_quiz(self):
+        """Test get random quiz POST endpoint"""
+        response = self.client().post('/quiz', json= {
+            'quiz_category': {'id': ''},
+            'previous_questions': [3, 6, 8, 10]
+        })
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertTrue(data['question'])
+
+    def test_get_random_quiz_with_no_payload_returns_422(self):
+        """Test a 422 response for no payload"""
+        response = self.client().post('/quiz')
+        data = json.loads(response.data)
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'unprocessable')
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
